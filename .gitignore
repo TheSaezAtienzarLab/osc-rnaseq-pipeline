@@ -9,3 +9,5 @@ Snakefile.bak
 workflow/common/__pycache__/utils.cpython-310.pyc
 gene_list.tmp
 workflow_dag.svg
+workflow/common/__pycache__/__init__.cpython-310.pyc
+workflow/common/__pycache__/utils.cpython-310.pyc

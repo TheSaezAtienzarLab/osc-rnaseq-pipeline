@@ -1,7 +1,7 @@
-# RNA-seq workflow configuration
+# RNA-seq workflow configuration for BRB-seq (single-end)
 
 # Path to metasheet with sample information
-metasheet_path: "resources/metadata/samples.csv"
+metasheet_path: "resources/config/metasheet.csv"
 
 # Test mode flag - will be overridden by command line when needed
 test_mode: false
@@ -10,8 +10,6 @@ test_mode: false
 fastqc_threads: 2
 fastqc_memory: 4000
 multiqc_memory: 4000
-trimming_threads: 4
-trimming_memory: 32000
 star_threads: 8
 star_memory: 32000
 star_index_threads: 16
@@ -24,10 +22,10 @@ featurecounts_memory: 8000
 merge_counts_memory: 4000
 multiqc_counts_memory: 4000
 
-# Reference files
-genome_fasta: "resources/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
-gtf_file: "resources/genome/Homo_sapiens.GRCh38.90.gtf"
-star_index: "resources/genome/star_index"
+# Reference files - updated for BRB-seq
+genome_fasta: "/users/PAS2598/duarte63/rna_seq_resources/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
+gtf_file: "/users/PAS2598/duarte63/rna_seq_resources/genome/Homo_sapiens.GRCh38.90.gtf"
+star_index: "/users/PAS2598/duarte63/rna_seq_resources/genome/star_index"
 
 # STAR parameters
 sjdb_overhang: 100            # Read length - 1
@@ -38,14 +36,10 @@ star_match_min: 0.66          # Min match length
 star_sjdb_overhang_min: 3     # Min splice junction overhang
 star_intron_max: 500000       # Max intron length
 
-# Default trimming parameters (will be overridden by auto-detection)
-leading_quality: 3
-trailing_quality: 3
-sliding_window: "4:15"
-min_length: 36
-
 # Feature counts parameters
 feature_type: "exon"          # Feature type to count (exon, gene, transcript)
 attribute: "gene_id"          # Attribute to use for grouping features
-strand_specificity: "0"       # Strand specificity: 0 (unstranded), 1 (stranded), 2 (reversely stranded)
-featurecounts_extra: "-p -B -C --fracOverlap 0.2"  # Additional parameters for featureCounts
+strand_specificity: "1"       # Strand specificity: 0 (unstranded), 1 (stranded), 2 (reversely stranded)
+                              # BRB-seq is typically forward stranded (1)
+featurecounts_extra: "-B -C --fracOverlap 0.2"  # Additional parameters for featureCounts
+                                                # Removed -p (paired-end) flag for single-end BRB-seq

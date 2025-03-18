@@ -29,7 +29,7 @@ multiqc_fastp:
   mem_mb: 4000
   threads: 1
 
-star_align:
+star_align_brbseq:
   time: "04:00:00"
   mem_mb: 64000
   threads: 8

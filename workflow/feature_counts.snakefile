@@ -33,13 +33,14 @@ rule feature_counts:
     log:
         "logs/counts/{sample}.featurecounts.log"
     params:
-        gtf=config.get("gtf_file", "resources/genome/Homo_sapiens.GRCh38.90.gtf"),
+        gtf=config.get("gtf_file", "/users/PAS2598/duarte63/rna_seq_resources/genome/Homo_sapiens.GRCh38.90.gtf"),
         # Feature type to count (default: exon)
         feature_type=config.get("feature_type", "exon"),
         # Attribute to use for grouping features (default: gene_id)
         attribute=config.get("attribute", "gene_id"),
         # Strand specificity: 0 (unstranded), 1 (stranded), 2 (reversely stranded)
-        strand=config.get("strand_specificity", "0"),
+        # For BRB-seq, we typically use stranded=1 (forward stranded)
+        strand=config.get("strand_specificity", "1"),
         # Additional parameters
         extra_params=config.get("featurecounts_extra", "-p -B -C --fracOverlap 0.2")
     threads: config.get("featurecounts_threads", 4)
@@ -53,15 +54,15 @@ rule feature_counts:
         # Run featureCounts
         echo "Running featureCounts on {wildcards.sample}..." > {log} 2>&1
         
-        featureCounts \
-            -a {params.gtf} \
-            -o {output.counts} \
-            -t {params.feature_type} \
-            -g {params.attribute} \
-            -s {params.strand} \
-            -T {threads} \
-            {params.extra_params} \
-            {input.bam} \
+        featureCounts \\
+            -a {params.gtf} \\
+            -o {output.counts} \\
+            -t {params.feature_type} \\
+            -g {params.attribute} \\
+            -s {params.strand} \\
+            -T {threads} \\
+            {params.extra_params} \\
+            {input.bam} \\
             >> {log} 2>&1
             
         # Check if output was created successfully
@@ -112,9 +113,9 @@ rule multiqc_counts:
         # Run MultiQC
         echo "Running MultiQC on feature counts results..." > {log} 2>&1
         
-        multiqc --force \
-            --outdir {params.outdir} \
-            Analysis/Counts/FeatureCounts/ \
+        multiqc --force \\
+            --outdir {params.outdir} \\
+            Analysis/Counts/FeatureCounts/ \\
             >> {log} 2>&1
             
         # Verify output
