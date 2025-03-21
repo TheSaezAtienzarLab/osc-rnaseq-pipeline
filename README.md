@@ -117,7 +117,6 @@ project_root/
 
 ## Configuration
 
-<<<<<<< HEAD
 - Snakemake (v6.0+)
 - FastQC
 - MultiQC
@@ -125,38 +124,6 @@ project_root/
 - STAR
 - samtools
 - subread (2.0.8)
-=======
-### Sample Configuration
-
-Samples are defined in `resources/config/metasheet.csv`:
-
-```csv
-sample,R1,R2
-sample1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
-sample2,/path/to/sample2_R1.fastq.gz,/path/to/sample2_R2.fastq.gz
-```
-
-### Pipeline Parameters
-
-Key parameters in `resources/config/params.yaml`:
-
-```yaml
-# Resource parameters
-fastqc_threads: 2
-trimming_threads: 4
-star_threads: 8
-featurecounts_threads: 4
-
-# Reference files
-genome_fasta: "resources/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
-gtf_file: "resources/genome/Homo_sapiens.GRCh38.90.gtf"
-
-# Feature counts parameters
-feature_type: "exon"          # Feature type to count
-attribute: "gene_id"          # Attribute for grouping features
-strand_specificity: "0"       # Strand specificity (0=unstranded)
-```
->>>>>>> c45f6d176d965773ff0dd163e104abb52db23b51
 
 ## Setup
 
