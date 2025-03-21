@@ -1,23 +1,25 @@
-# BRB-seq Analysis Pipeline
+# RNA-seq Analysis Pipeline
 
 ## Overview
 
-This repository contains a comprehensive BRB-seq analysis pipeline implemented using Snakemake. The pipeline processes bulk RNA barcoding and sequencing (BRB-seq) data through quality control, alignment, and quantification stages to produce gene expression counts ready for downstream analysis.
+This repository contains a comprehensive RNA-seq analysis pipeline implemented using Snakemake. The pipeline processes raw sequencing data through quality control, trimming, alignment, and quantification stages to produce gene expression counts ready for downstream analysis.
 
 ## Pipeline Stages
 
-The pipeline consists of three main stages:
+The pipeline consists of five main stages:
 
-1. **Quality Control (QC)**: Assesses the quality of raw sequencing data
-2. **Alignment**: Maps raw reads to a reference genome
-3. **Feature Counts**: Quantifies gene expression by counting reads mapped to genomic features
+1. **Quality Control (QC)**: Assesses the quality of raw sequencing data and determines optimal trimming parameters
+2. **Trimming**: Removes adapters and low-quality bases from raw reads
+3. **Alignment**: Maps trimmed reads to a reference genome
+4. **Feature Counts**: Quantifies gene expression by counting reads mapped to genomic features
+5. **Workflow Completion**: Ensures all stages are completed successfully
 
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/TheSaezAtienzarLab/osc-brbseq-pipeline.git
-cd osc-brbseq-pipeline
+git clone https://github.com/TheSaezAtienzarLab/osc-rnaseq-pipeline.git
+cd satienzar-brnaseq
 
 # Configure samples in resources/config/metasheet.csv
 # Configure parameters in resources/config/params.yaml
@@ -32,6 +34,7 @@ For detailed information about the pipeline, see the following documentation:
 
 - [Pipeline Overview](docs/README_PIPELINE.md)
 - [Quality Control Documentation](docs/README_QC.md)
+- [Trimming Documentation](docs/README_TRIMMING.md)
 - [Alignment Documentation](docs/README_ALIGNMENT.md)
 - [Feature Counts Documentation](docs/README_COUNTS.md)
 
@@ -40,6 +43,7 @@ For detailed information about the pipeline, see the following documentation:
 - Snakemake (≥ 6.0)
 - FastQC
 - MultiQC
+- fastp
 - STAR
 - Samtools
 - Subread (for featureCounts)
@@ -47,29 +51,24 @@ For detailed information about the pipeline, see the following documentation:
 
 ## Key Features
 
-### What is BRB-seq?
-
-BRB-seq (Bulk RNA Barcoding and sequencing) is an ultra-high-throughput 3' mRNA-seq technology that:
-- Uses early-stage sample barcoding and unique molecular identifiers (UMIs)
-- Allows pooling of up to 384 samples early in the workflow
-- Generates reads only from the 3' region of mRNA molecules
-- Requires lower sequencing depth (1-5 million reads per sample vs 30 million for standard RNA-seq)
-- Is cost-effective for large-scale transcriptomic studies
-- Has greater tolerance for lower RNA quality
-- Uses forward-stranded library preparation (strand specificity = 1)
-
 ### Quality Control
 - FastQC analysis of raw reads
 - MultiQC reporting for easy comparison
+- Automatic determination of optimal trimming parameters
+
+### Trimming
+- Adapter and quality trimming with fastp
+- Sample-specific trimming parameters
+- MultiQC reporting of trimming results
 
 ### Alignment
-- STAR alignment optimized for BRB-seq single-end reads
+- STAR alignment with optimized parameters
 - BAM indexing and metrics collection
 - MultiQC reporting of alignment statistics
 
 ### Feature Counts
 - Gene expression quantification with featureCounts
-- Forward-stranded counting mode (strand specificity = 1)
+- Flexible counting options (exon/gene/transcript level)
 - Merged count matrix generation
 - CPM normalization
 - MultiQC reporting of counting statistics
@@ -81,7 +80,9 @@ project_root/
 ├── Analysis/                  # Main output directory
 │   ├── QC/                    # Quality control outputs
 │   │   ├── FastQC/           # FastQC reports
-│   │   └── MultiQC/          # MultiQC reports for raw data
+│   │   ├── MultiQC/          # MultiQC reports for raw data
+│   │   └── Trimming/         # Trimming parameters and reports
+│   ├── Trimmed/              # Trimmed FASTQ files
 │   ├── Alignment/            # Alignment outputs
 │   │   ├── STAR/             # STAR alignment files
 │   │   └── MultiQC/          # MultiQC reports for alignment
@@ -90,6 +91,7 @@ project_root/
 │       └── MultiQC/          # MultiQC reports for counts
 ├── logs/                      # Log files for all steps
 │   ├── fastqc/               # FastQC logs
+│   ├── trimming/             # Trimming logs
 │   ├── star/                 # Alignment logs
 │   ├── counts/               # Feature counts logs
 │   └── workflow/             # Workflow stage logs
@@ -99,12 +101,15 @@ project_root/
 │   │   ├── metasheet.csv     # Sample metadata
 │   │   └── cluster.yaml      # Cluster configuration
 │   ├── genome/               # Reference genome files
-│   └── metadata/             # Generated metadata files
+│   ├── metadata/             # Generated metadata files
+│   ├── adaptors/             # Adaptor sequences
+│   └── primers/              # Primer sequences
 ├── workflow/                  # Workflow components
 │   ├── scripts/              # Helper scripts
 │   ├── common/               # Shared utility functions
 │   ├── utils/                # Additional utility scripts
-│   ├── qc_params.snakefile   # QC rules
+│   ├── qc_params.snakefile   # QC and parameter generation rules
+│   ├── fastp_trimming.snakefile # Trimming rules
 │   ├── star_alignment.snakefile # Alignment rules
 │   └── feature_counts.snakefile # Feature counts rules
 └── Snakefile                  # Main workflow file
@@ -126,9 +131,9 @@ project_root/
 Samples are defined in `resources/config/metasheet.csv`:
 
 ```csv
-sample,R1
-sample1,/path/to/sample1.fastq.gz
-sample2,/path/to/sample2.fastq.gz
+sample,R1,R2
+sample1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
+sample2,/path/to/sample2_R1.fastq.gz,/path/to/sample2_R2.fastq.gz
 ```
 
 ### Pipeline Parameters
@@ -138,6 +143,7 @@ Key parameters in `resources/config/params.yaml`:
 ```yaml
 # Resource parameters
 fastqc_threads: 2
+trimming_threads: 4
 star_threads: 8
 featurecounts_threads: 4
 
@@ -148,7 +154,7 @@ gtf_file: "resources/genome/Homo_sapiens.GRCh38.90.gtf"
 # Feature counts parameters
 feature_type: "exon"          # Feature type to count
 attribute: "gene_id"          # Attribute for grouping features
-strand_specificity: "1"       # Strand specificity (1=forward stranded for BRB-seq)
+strand_specificity: "0"       # Strand specificity (0=unstranded)
 ```
 >>>>>>> c45f6d176d965773ff0dd163e104abb52db23b51
 
@@ -156,7 +162,7 @@ strand_specificity: "1"       # Strand specificity (1=forward stranded for BRB-s
 
 1. Clone this repository:
    ```
-   git clone https://github.com/TheSaezAtienzarLab/osc-brbseq-pipeline.git
+   git clone https://github.com/TheSaezAtienzarLab/osc-rnaseq-pipeline.git
    ```
 
 2. Create the necessary directories (if they don't exist):
@@ -166,9 +172,9 @@ strand_specificity: "1"       # Strand specificity (1=forward stranded for BRB-s
 
 3. Prepare your sample metadata file (`resources/config/metasheet.csv`):
    ```
-   sample,R1
-   sample1,/path/to/sample1.fastq.gz
-   sample2,/path/to/sample2.fastq.gz
+   sample,R1,R2
+   sample1,/path/to/sample1_R1.fastq.gz,/path/to/sample1_R2.fastq.gz
+   sample2,/path/to/sample2_R1.fastq.gz,/path/to/sample2_R2.fastq.gz
    ```
 
 4. Configure the workflow parameters in `resources/config/params.yaml`:
@@ -204,6 +210,9 @@ The workflow supports running individual stages:
 # Run just the QC stage
 snakemake --cores <N> qc_all
 
+# Run just the trimming stage
+snakemake --cores <N> trim_all
+
 # Run just the alignment stage
 snakemake --cores <N> align_all
 
@@ -228,11 +237,19 @@ snakemake --cluster "sbatch --mem={resources.mem_mb} --time={params.time} --cpus
 ## Output Files
 
 ### Quality Control
-- `Analysis/QC/FastQC/{sample}/{sample}_R1_fastqc.html`: FastQC reports
+- `Analysis/QC/FastQC/{sample}/{sample}_R[1,2]_fastqc.html`: FastQC reports
 - `Analysis/QC/MultiQC/multiqc_report.html`: MultiQC summary of FastQC results
+- `Analysis/QC/Trimming/trimming_params.json`: Sample-specific trimming parameters
+
+### Trimming
+- `Analysis/Trimmed/{sample}/{sample}_R[1,2]_trimmed.fastq.gz`: Trimmed FASTQ files
+- `Analysis/QC/Trimming/Reports/{sample}_fastp.html`: fastp reports
+- `Analysis/QC/Trimming/MultiQC/multiqc_report.html`: MultiQC summary of trimming
+- `resources/metadata/trimmed_samples.csv`: Metadata file with trimmed FASTQ paths
 
 ### Alignment
 - `Analysis/Alignment/STAR/{sample}/{sample}.Aligned.sortedByCoord.out.bam`: Aligned BAM files
+- `Analysis/Alignment/STAR/{sample}/{sample}.Aligned.toTranscriptome.out.bam`: Transcriptome-aligned BAM
 - `Analysis/Alignment/STAR/{sample}/{sample}.ReadsPerGene.out.tab`: Gene counts
 - `Analysis/Alignment/STAR/{sample}/{sample}.SJ.out.tab`: Splice junctions
 - `Analysis/Alignment/STAR/{sample}/{sample}.flagstat.txt`: Alignment statistics
@@ -249,6 +266,7 @@ snakemake --cluster "sbatch --mem={resources.mem_mb} --time={params.time} --cpus
 The pipeline includes checkpoint markers to ensure each stage completes successfully:
 
 - `Analysis/QC/.qc_complete`: QC stage completed
+- `Analysis/Trimmed/.trimming_complete`: Trimming stage completed
 - `Analysis/Alignment/.main_alignment_complete`: Alignment stage completed
 - `Analysis/Counts/.counts_complete`: Feature counts stage completed
 - `Analysis/.workflow_complete`: Entire workflow completed
@@ -274,6 +292,7 @@ The pipeline includes checkpoint markers to ensure each stage completes successf
 Log files are stored in the `logs/` directory, organized by pipeline stage:
 
 - `logs/fastqc/`: FastQC logs
+- `logs/trimming/`: Trimming logs
 - `logs/star/`: Alignment logs
 - `logs/counts/`: Feature counts logs
 - `logs/workflow/`: Workflow checkpoint logs
@@ -313,7 +332,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 If you use this pipeline in your research, please cite:
 
 ```
-Duarte Gabriel, Saez-Atienzar Sara. (2025). BRB-seq Analysis Pipeline. GitHub repository, https://github.com/TheSaezAtienzarLab/osc-brbseq-pipeline
+Duarte Gabriel,Saez-Atienzar Sara. (2025). RNA-seq Analysis Pipeline. GitHub repository, https://github.com/TheSaezAtienzarLab/osc-rnaseq-pipeline
 ```
 
 ## Contact
