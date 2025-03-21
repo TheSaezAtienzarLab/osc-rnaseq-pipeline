@@ -1,4 +1,4 @@
-# RNA-seq Pipeline Resources
+ RNA-seq Pipeline Resources
 
 This directory contains configuration files, reference data, and metadata required by the RNA-seq analysis pipeline.
 
@@ -129,4 +129,4 @@ If you need to prepare your own reference genome:
 1. Download the reference genome FASTA and GTF annotation
 2. Place them in the `genome/` directory
 3. Update the paths in `config/params.yaml`
-4. The STAR index will be created automatically by the pipeline 
+4. The STAR index will be created automatically by the pipeline
