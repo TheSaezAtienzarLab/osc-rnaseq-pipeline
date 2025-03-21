@@ -112,6 +112,15 @@ project_root/
 
 ## Configuration
 
+<<<<<<< HEAD
+- Snakemake (v6.0+)
+- FastQC
+- MultiQC
+- fastp
+- STAR
+- samtools
+- subread (2.0.8)
+=======
 ### Sample Configuration
 
 Samples are defined in `resources/config/metasheet.csv`:
@@ -141,6 +150,7 @@ feature_type: "exon"          # Feature type to count
 attribute: "gene_id"          # Attribute for grouping features
 strand_specificity: "1"       # Strand specificity (1=forward stranded for BRB-seq)
 ```
+>>>>>>> c45f6d176d965773ff0dd163e104abb52db23b51
 
 ## Setup
 

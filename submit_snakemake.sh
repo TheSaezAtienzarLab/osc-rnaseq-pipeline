@@ -4,17 +4,17 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=28
 #SBATCH --mem=64GB
-#SBATCH --account=PAS2598
+#SBATCH --account=PASXXXX
 #SBATCH --output=logs/slurm/snakemake_%j.out
 #SBATCH --error=logs/slurm/snakemake_%j.err
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=gabriel.duarte@osumc.edu
+#SBATCH --mail-user=ACCOUNT
 
 # Load modules
 module load miniconda3/24.1.2-py310
 
 # Activate your conda environment
-source activate local
+source activate {YOUR_ENV}
 
 # Create common/utils.py if it doesn't exist
 mkdir -p workflow/common

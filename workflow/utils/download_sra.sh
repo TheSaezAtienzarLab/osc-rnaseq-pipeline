@@ -3,31 +3,34 @@
 #SBATCH --time=12:00:00
 #SBATCH --nodes=10
 #SBATCH --ntasks-per-node=8
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 #SBATCH --job-name=prefetch
 #SBATCH --output=prefetch_%j.log
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=mor558@osumc.edu
 
 # Base directory
-BASE_DIR="/fs/ess/PAS2598/protocol_comparison/motoneurons"
+BASE_DIR="/fs/scratch/PAS2598/All_RNAseq_Samples"
 
 # Load conda
 module load miniconda3
 
 # Activate your environment
-source activate local
+source activate bulk_RNA_env
 
 # Create main directory and lab directories
-mkdir -p ${BASE_DIR}/{Souza,Scaber,Okano}_Samples
+mkdir -p ${BASE_DIR}/{astrocytes,fetal_astrocytes,NPCs,cortical_neurons}_Samples
 
 # Initialize metasheet
 mkdir -p ${BASE_DIR}/resources/config
-echo "sample,R1,R2" > ${BASE_DIR}/resources/config/metasheet.csv
+echo "sample,R1" > ${BASE_DIR}/resources/config/metasheet.csv
 
 # Define samples by lab
 declare -A lab_samples=(
-    ["Souza"]="SRR22522185 SRR22522186"
-    ["Scaber"]="SRR28516486 SRR28516488 SRR28516489"
-    ["Okano"]="SRR29476310 SRR29476289 SRR29476277"
+    ["astrocytes"]="SRR15503422 SRR15503424 SRR15503426 SRR15503428 SRR15503430 SRR15503440 SRR15503432 SRR15503434 SRR15503442 SRR15503448 SRR15503450 SRR15503452"
+    ["fetal_astrocytes "]="SRR7050888 SRR7050889"
+    ["NPCs"]="SRR15503444 SRR15503445"
+    ["cortical_neurons"]="SRR7050886 SRR7050887 SRR8400799 SRR8400800 SRR8400801 SRR8400802 SRR8400803 SRR8400804 SRR15503436 SRR15503437"
 )
 
 for lab in "${!lab_samples[@]}"; do
@@ -41,26 +44,24 @@ for lab in "${!lab_samples[@]}"; do
         
         if [ $? -eq 0 ]; then
             echo "Running fasterq-dump for ${srr}..."
-            fasterq-dump --split-files ${srr}
+            fasterq-dump ${srr}
             
-            if [ -f "${srr}_1.fastq" ] && [ -f "${srr}_2.fastq" ]; then
-                echo "Compressing files..."
-                gzip ${srr}_1.fastq
-                gzip ${srr}_2.fastq
+            if [ -f "${srr}.fastq" ]; then
+                echo "Compressing file..."
+                gzip ${srr}.fastq
                 
-                # Rename files to match desired format
-                mv ${srr}_1.fastq.gz ${srr}_R1.fastq.gz
-                mv ${srr}_2.fastq.gz ${srr}_R2.fastq.gz
+                # Rename file to match desired format
+                mv ${srr}.fastq.gz ${srr}_R1.fastq.gz
                 
                 # Add to metasheet
-                echo "${lab}_${srr},${BASE_DIR}/${lab}_Samples/${srr}_R1.fastq.gz,${BASE_DIR}/${lab}_Samples/${srr}_R2.fastq.gz" >> ${BASE_DIR}/resources/config/metasheet.csv
+                echo "${lab}_${srr},${BASE_DIR}/${lab}_Samples/${srr}_R1.fastq.gz" >> ${BASE_DIR}/resources/config/metasheet.csv
                 
                 # Clean up SRA files
                 rm -rf ~/ncbi/public/sra/${srr}.sra
                 
                 echo "Successfully processed ${srr}"
             else
-                echo "Error: FastQ files not created for ${srr}"
+                echo "Error: FastQ file not created for ${srr}"
             fi
         else
             echo "Error: Prefetch failed for ${srr}"
